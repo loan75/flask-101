@@ -1,10 +1,11 @@
 # tests/test_views.py
 from flask_testing import TestCase
-from wsgi import PRODUCTS
-from wsgi import app
+from flask import json
+from wsgi import PRODUCTS, app
 
 
 class TestViews(TestCase):
+
     def create_app(self):
         app.config['TESTING'] = True
         return app
@@ -28,3 +29,41 @@ class TestViews(TestCase):
         product = response.json
         self.assertIsInstance(product, dict)
         self.assert_404(response)
+
+    def test_create_ok(self):
+        response = self.client.post("/api/v1/products", data=json.dumps({"name": "lolo"}),
+                                    headers={'Content-Type': 'application/json'})
+        self.assertIsInstance(PRODUCTS, dict)
+        self.assertGreater(len(PRODUCTS), 3)
+        self.assertEqual(response.status_code, 201)
+
+    def test_create_ko(self):
+        response = self.client.post("/api/v1/products", data=json.dumps({"toto": "toto"}),
+                                    headers={'Content-Type': 'application/json'})
+        self.assertIsInstance(PRODUCTS, dict)
+        self.assertGreater(len(PRODUCTS), 2)
+        self.assertEqual(response.status_code, 400)
+
+    def test_update_ok(self):
+        response = self.client.put("/api/v1/products/1", data=json.dumps({"name": "toto"}),
+                                   headers={'Content-Type': 'application/json'})
+        self.assertIsInstance(PRODUCTS, dict)
+        self.assertGreater(len(PRODUCTS), 2)
+        self.assertEqual(response.status_code, 204)
+        self.assertEqual(PRODUCTS[1]["name"], "toto")
+
+    def test_update_ko(self):
+        response = self.client.put("/api/v1/products/999", data=json.dumps({"name": "toto"}),
+                                   headers={'Content-Type': 'application/json'})
+        self.assertIsInstance(PRODUCTS, dict)
+        self.assertGreater(len(PRODUCTS), 2)
+        self.assertEqual(response.status_code, 422)
+        self.assertEqual(PRODUCTS[1]["name"], "Skello")
+
+    def test_update_empty_name_ko(self):
+        response = self.client.put("/api/v1/products/999", data=json.dumps({"name": ""}),
+                                   headers={'Content-Type': 'application/json'})
+        self.assertIsInstance(PRODUCTS, dict)
+        self.assertGreater(len(PRODUCTS), 2)
+        self.assertEqual(response.status_code, 422)
+        self.assertEqual(PRODUCTS[1]["name"], "Skello")
